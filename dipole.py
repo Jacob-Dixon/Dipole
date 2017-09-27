@@ -171,6 +171,14 @@ def Hertz_dipole_nf (r, p, R, phi, f, t=0, epsr=1.):
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
 	return E,B
+	
+def createDirectory():
+	folderName = time.strftime("%Y%m%d-%H%M%S")
+	directory = os.getcwd()
+	path = (directory + '\\' + folderName)
+	if not os.path.exists(path):
+		os.makedirs(path)
+	return path
 
 if __name__ == "__main__":
 	from pylab import *
@@ -201,6 +209,8 @@ if __name__ == "__main__":
 	nt=int(t1/t0)
 	#nt = 1
 	t=numpy.linspace(t0,t1,nt)
+	
+	path = createDirectory()
 
 	print("Computing the radiation...")
 	fig = figure(num=1,figsize=(10,6),dpi=300)
@@ -232,3 +242,5 @@ if __name__ == "__main__":
 		print('Saving frame' + fname)
 		fig.savefig(fname+'.png',bbox='tight')
 		clf()
+	numpy.savetxt(path + "\\magData.csv",magData,delimiter = ',', fmt = "%s")
+	numpy.savetxt(path + "\\phaseData.csv",phaseData,delimiter = ',', fmt = "%s")
