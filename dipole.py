@@ -5,11 +5,15 @@ This file gives the dipole radiation (E and B field) in the far field, the full 
 @author: manu
 """
 from __future__ import division
+from pylab import *
 import numpy
+import time
+import os
 c=299792458.
 pi=numpy.pi
 mu0=4*pi*1e-7
 eps0=1./(mu0*c**2)
+multipleTimeSamples = False
 
 
 def Hertz_dipole (r, p, R, phi, f, t=0, epsr=1.):
@@ -64,7 +68,7 @@ def Hertz_dipole (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**2*c**3)*(w**2*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)*(1-c/(1j*w*magrprimep))
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B
+	return E,B,phip
 
 def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 	"""
@@ -116,7 +120,7 @@ def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**2*c**3)*(w**2*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B
+	return E,B,phip
 
 
 
@@ -170,7 +174,7 @@ def Hertz_dipole_nf (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**3*c**2)*(w*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)*1j
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B
+	return E,B,phip
 	
 def createDirectory():
 	folderName = time.strftime("%Y%m%d-%H%M%S")
@@ -181,15 +185,15 @@ def createDirectory():
 	return path
 
 if __name__ == "__main__":
-	from pylab import *
 	#observation points
-	nx=401 # number of points
-	xmax=2 #meters
-	nz=201 # number of points
-	zmax=1 #meters
+	nx = 401 # number of points
+	xmax = 2 #meters
+	nz = 201 # number of points
+	zmax = 1 #meters
+	y = .2 # above dipole
 	x=numpy.linspace(-xmax,xmax,nx)
-	y=.2 # above dipole
 	z=numpy.linspace(-zmax,zmax,nz)
+	observationTime =  1#obs. time (nanoseconds) used if multipleTimeSamples = False
 
 	#dipole
 	freq=numpy.array([1000e6])
@@ -202,45 +206,75 @@ if __name__ == "__main__":
 	R=numpy.array([0,0,0])
 	#dipole phases
 	phases_dip=0
-
-	nt=100
-	t0=1/freq/10
-	t1=5/freq
-	nt=int(t1/t0)
-	#nt = 1
-	t=numpy.linspace(t0,t1,nt)
-	
 	path = createDirectory()
-
 	print("Computing the radiation...")
-	fig = figure(num=1,figsize=(10,6),dpi=300)
-	for k in range(nt): #t[k] is the time sample
+	
+	if multipleTimeSamples == True:
+		nt=100
+		t0=1/freq/10
+		t1=5/freq
+		nt=int(t1/t0)
+		#nt = 1
+		t=numpy.linspace(t0,t1,nt)
+		fig = figure(num=1,figsize=(10,6),dpi=300)
+		for k in range(nt): #t[k] is the time sample
+			P=numpy.zeros((nx,nz))
+			for i in range(nx):
+				for j in range(nz):
+					r=array([x[i],y,z[j]])
+					E,B,phip = Hertz_dipole_ff(r, p, R, phases_dip, freq, t[k], epsr=1.)
+					S=real(E)**2#0.5*numpy.cross(E.T,conjugate(B.T))
+					P[i,j]=sum(S)
+			print('%2.1f/100'%((k+1)/nt*100))
+			#Radiation diagram
+			#pcolormesh(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
+			#pcolor(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
+			pcolor(x,z,np.log10(P[:,:].T),vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
+			#pcolor(x,z,P[:,:].T, cmap='hot')
+			colorbar()
+			fname = 'img_%s' %(k)
+			#clim(0,1000)
+			axis('scaled')
+			xlim(-xmax,xmax)
+			ylim(-zmax,zmax)
+			xlabel(r'$x/$m')
+			ylabel(r'$z/$m')
+			title(r'$t=%2.2f$ ns'%(t[k]/1e-9))
+			print('Saving frame' + fname)
+			fig.savefig(path + '\\' + fname +'.png',bbox = 'tight')
+			clf()
+			magData = P[:,:].T #save magnitude of electric field
+			phaseData = phip[:,:] #save phase
+			numpy.savetxt(path + "\\magData" + fname + ".csv",magData,delimiter = ',', fmt = "%s")
+			numpy.savetxt(path + "\\phaseData" + fname + ".csv",phaseData,delimiter = ',', fmt = "%s")
+	else: #single time sample
+		fig = figure(num=1,figsize=(10,6),dpi=300)
+		#for k in range(nt): #t[k] is the time sample
 		P=numpy.zeros((nx,nz))
 		for i in range(nx):
 			for j in range(nz):
 				r=array([x[i],y,z[j]])
-				#E,B=Hertz_dipole_ff (r, p, R, phases_dip, freq, t[k], epsr=1.)
-				#E,B=Hertz_dipole_ff(r, p, R, phases_dip, freq, 1e-10, epsr=1.)
-				E,B=Hertz_dipole_ff(r, p, R, phases_dip, freq, 0, epsr=1.)
+				E,B,phip = Hertz_dipole_ff(r, p, R, phases_dip, freq, observationTime, epsr=1.)
 				S=real(E)**2#0.5*numpy.cross(E.T,conjugate(B.T))
 				P[i,j]=sum(S)
-		print('%2.1f/100'%((k+1)/nt*100))
 		#Radiation diagram
 		#pcolormesh(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
-		#pcolor(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
-		pcolor(x,z,np.log10(P[:,:].T),vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
+		pcolor(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
+		#pcolor(x,z,np.log10(P[:,:].T),vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
 		#pcolor(x,z,P[:,:].T, cmap='hot')
 		colorbar()
-		fname = 'img_%s' %(k)
+		fname = 'EfieldPlot' + str(observationTime) + 'ns'
 		#clim(0,1000)
 		axis('scaled')
 		xlim(-xmax,xmax)
 		ylim(-zmax,zmax)
 		xlabel(r'$x/$m')
 		ylabel(r'$z/$m')
-		title(r'$t=%2.2f$ ns'%(t[k]/1e-9))
+		title('Electric Field Plot at ' + str(observationTime) + 'ns')
 		print('Saving frame' + fname)
-		fig.savefig(fname+'.png',bbox='tight')
+		fig.savefig(path + '\\' + fname +'.png',bbox = 'tight')
 		clf()
-	numpy.savetxt(path + "\\magData.csv",magData,delimiter = ',', fmt = "%s")
-	numpy.savetxt(path + "\\phaseData.csv",phaseData,delimiter = ',', fmt = "%s")
+		magData = P[:,:].T #save magnitude of electric field
+		phaseData = phip[:,:] #save phase
+		numpy.savetxt(path + "\\magData.csv",magData,delimiter = ',', fmt = "%s")
+		numpy.savetxt(path + "\\phaseData.csv",phaseData,delimiter = ',', fmt = "%s")
