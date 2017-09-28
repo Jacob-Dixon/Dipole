@@ -4,7 +4,6 @@ This file gives the dipole radiation (E and B field) in the far field, the full 
 
 @author: manu
 """
-from __future__ import division
 from pylab import *
 import numpy
 import time
@@ -68,7 +67,7 @@ def Hertz_dipole (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**2*c**3)*(w**2*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)*(1-c/(1j*w*magrprimep))
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B,phip
+	return E,B,expfac
 
 def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 	"""
@@ -120,7 +119,7 @@ def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**2*c**3)*(w**2*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B,phip
+	return E,B,expfac
 
 
 
@@ -174,7 +173,7 @@ def Hertz_dipole_nf (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**3*c**2)*(w*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)*1j
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B,phip
+	return E,B,expfac
 	
 def createDirectory():
 	folderName = time.strftime("%Y%m%d-%H%M%S")
@@ -205,7 +204,7 @@ if __name__ == "__main__":
 	p=numpy.array([0,0,norm_p])
 	R=numpy.array([0,0,0])
 	#dipole phases
-	phases_dip=0
+	phases_dip=1
 	path = createDirectory()
 	print("Computing the radiation...")
 	
@@ -251,12 +250,14 @@ if __name__ == "__main__":
 		fig = figure(num=1,figsize=(10,6),dpi=300)
 		#for k in range(nt): #t[k] is the time sample
 		P=numpy.zeros((nx,nz))
+		phipArr = numpy.zeros((nx,nz))
 		for i in range(nx):
 			for j in range(nz):
 				r=array([x[i],y,z[j]])
 				E,B,phip = Hertz_dipole_ff(r, p, R, phases_dip, freq, observationTime, epsr=1.)
 				S=real(E)**2#0.5*numpy.cross(E.T,conjugate(B.T))
 				P[i,j]=sum(S)
+				phipArr[i,j] = real(phip) #save phase info into array
 		#Radiation diagram
 		#pcolormesh(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
 		pcolor(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
@@ -274,7 +275,5 @@ if __name__ == "__main__":
 		print('Saving frame' + fname)
 		fig.savefig(path + '\\' + fname +'.png',bbox = 'tight')
 		clf()
-		magData = P[:,:].T #save magnitude of electric field
-		phaseData = phip[:,:] #save phase
-		numpy.savetxt(path + "\\magData.csv",magData,delimiter = ',', fmt = "%s")
-		numpy.savetxt(path + "\\phaseData.csv",phaseData,delimiter = ',', fmt = "%s")
+		numpy.savetxt(path + "\\magData.csv",P[:,:].T,delimiter = ',', fmt = "%s") #save magnitude of electric field
+		numpy.savetxt(path + "\\phaseData.csv",phipArr[:,:],delimiter = ',', fmt = "%s") #save phase
