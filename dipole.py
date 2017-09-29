@@ -39,6 +39,7 @@ def Hertz_dipole (r, p, R, phi, f, t=0, epsr=1.):
 		rp_c_p_c_rp = numpy.cross(rprime_cross_p, rprime) # (r' x p) x r'
 		rprime_dot_p = numpy.sum(rprime*p)
 		expfac = numpy.exp(1j*(w*t-krp+phip.T))/(4*pi*eps0*epsr)
+		phiOutput = numpy.exp(1j*(w*t-krp+phip.T))
 		Ex = expfac*(w**2/(c**2*magrprimep**3) * (numpy.tile(rp_c_p_c_rp[0],(nf,1))).T+(1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[0]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[0].T,(len(f),1)).T))
 		Ey = expfac*(w**2/(c**2*magrprimep**3) * (numpy.tile(rp_c_p_c_rp[1],(nf,1))).T+(1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[1]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[1].T,(len(f),1)).T))
 		Ez = expfac*(w**2/(c**2*magrprimep**3) * (numpy.tile(rp_c_p_c_rp[2],(nf,1))).T+(1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[2]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[2].T,(len(f),1)).T))
@@ -59,6 +60,7 @@ def Hertz_dipole (r, p, R, phi, f, t=0, epsr=1.):
 		rp_c_p_c_rp = numpy.cross(rprime_cross_p, rprime) # (r' x p) x r'
 		rprime_dot_p = numpy.sum(rprime*p,axis=1)
 		expfac = numpy.exp(1j*(w*t-krp+phip.T))/(4*pi*eps0*epsr)
+		phiOutput = numpy.exp(1j*(w*t-krp+phip.T))
 		Ex = expfac*(w**2/(c**2*magrprimep**3) * (numpy.tile(rp_c_p_c_rp[:,0],(nf,1))).T+(1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[:,0]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[:,0].T,(len(f),1)).T))
 		Ey = expfac*(w**2/(c**2*magrprimep**3) * (numpy.tile(rp_c_p_c_rp[:,1],(nf,1))).T+(1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[:,1]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[:,1].T,(len(f),1)).T))
 		Ez = expfac*(w**2/(c**2*magrprimep**3) * (numpy.tile(rp_c_p_c_rp[:,2],(nf,1))).T+(1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[:,2]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[:,2].T,(len(f),1)).T))
@@ -67,7 +69,7 @@ def Hertz_dipole (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**2*c**3)*(w**2*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)*(1-c/(1j*w*magrprimep))
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B,expfac
+	return E,B,phiOutput
 
 def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 	"""
@@ -92,6 +94,7 @@ def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 		rprime_cross_p = numpy.cross(rprime, p) # r'x p
 		rp_c_p_c_rp = numpy.cross(rprime_cross_p, rprime) # (r' x p) x r'
 		expfac = numpy.exp(1j*(w*t-krp+phip.T))/(4*pi*eps0*epsr)
+		phiOutput = numpy.exp(1j*(w*t-krp+phip.T))
 		Ex = (w**2/(c**2*magrprimep**3) * expfac)* (numpy.tile(rp_c_p_c_rp[0],(nf,1))).T
 		Ey = (w**2/(c**2*magrprimep**3) * expfac)* (numpy.tile(rp_c_p_c_rp[1],(nf,1))).T
 		Ez = (w**2/(c**2*magrprimep**3) * expfac)* (numpy.tile(rp_c_p_c_rp[2],(nf,1))).T
@@ -111,6 +114,7 @@ def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 		rprime_cross_p = numpy.cross(rprime, p) # r'x p
 		rp_c_p_c_rp = numpy.cross(rprime_cross_p, rprime) # (r' x p) x r'
 		expfac = numpy.exp(1j*(w*t-krp+phip.T))/(4*pi*eps0*epsr)
+		phiOutput = numpy.exp(1j*(w*t-krp+phip.T))
 		Ex = (w**2/(c**2*magrprimep**3) * expfac)* (numpy.tile(rp_c_p_c_rp[:,0],(nf,1))).T
 		Ey = (w**2/(c**2*magrprimep**3) * expfac)* (numpy.tile(rp_c_p_c_rp[:,1],(nf,1))).T
 		Ez = (w**2/(c**2*magrprimep**3) * expfac)* (numpy.tile(rp_c_p_c_rp[:,2],(nf,1))).T
@@ -119,7 +123,7 @@ def Hertz_dipole_ff (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**2*c**3)*(w**2*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B,expfac
+	return E,B,phiOutput
 
 
 
@@ -146,6 +150,7 @@ def Hertz_dipole_nf (r, p, R, phi, f, t=0, epsr=1.):
 		rprime_cross_p = numpy.cross(rprime, p) # r'x p
 		rprime_dot_p = numpy.sum(rprime*p)
 		expfac = numpy.exp(1j*(w*t-krp+phip.T))/(4*pi*eps0*epsr)
+		phiOutput = numpy.exp(1j*(w*t-krp+phip.T))
 		Ex = expfac*((1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[0]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[0].T,(len(f),1)).T))
 		Ey = expfac*((1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[1]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[1].T,(len(f),1)).T))
 		Ez = expfac*((1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[2]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[2].T,(len(f),1)).T))
@@ -165,6 +170,7 @@ def Hertz_dipole_nf (r, p, R, phi, f, t=0, epsr=1.):
 		rprime_cross_p = numpy.cross(rprime, p) # r' x p
 		rprime_dot_p = numpy.sum(rprime*p,axis=1) # r'.p
 		expfac = numpy.exp(1j*(w*t-krp+phip.T))/(4*pi*eps0*epsr)
+		phiOutput = numpy.exp(1j*(w*t-krp+phip.T))
 		Ex = expfac*((1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[:,0]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[:,0].T,(len(f),1)).T))
 		Ey = expfac*((1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[:,1]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[:,1].T,(len(f),1)).T))
 		Ez = expfac*((1/magrprimep**3-w*1j/(c*magrprimep**2))*(numpy.tile(3*rprime[:,2]*rprime_dot_p,(len(f),1)).T/magrprimep**2-numpy.tile(p[:,2].T,(len(f),1)).T))
@@ -173,7 +179,7 @@ def Hertz_dipole_nf (r, p, R, phi, f, t=0, epsr=1.):
 		Bz = expfac/(magrprimep**3*c**2)*(w*numpy.tile(rprime_cross_p[:,2],(nf,1)).T)*1j
 		E = numpy.vstack((numpy.sum(Ex,axis=0),numpy.sum(Ey,axis=0),numpy.sum(Ez,axis=0)))
 		B = numpy.vstack((numpy.sum(Bx,axis=0),numpy.sum(By,axis=0),numpy.sum(Bz,axis=0)))
-	return E,B,expfac
+	return E,B,phiOutput
 	
 def createDirectory():
 	folderName = time.strftime("%Y%m%d-%H%M%S")
