@@ -195,7 +195,7 @@ if __name__ == "__main__":
 	xmax = 2 #meters
 	nz = 201 # number of points
 	zmax = 1 #meters
-	y = .2 # above dipole
+	y = 2 # above dipole
 	x=numpy.linspace(-xmax,xmax,nx)
 	z=numpy.linspace(-zmax,zmax,nz)
 	observationTime =  1#obs. time (nanoseconds) used if multipleTimeSamples = False
@@ -266,9 +266,10 @@ if __name__ == "__main__":
 				phipArr[i,j] = real(phip) #save phase info into array
 		#Radiation diagram
 		#pcolormesh(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
-		pcolor(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
+		#pcolor(x,z,P[:,:].T, vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
 		#pcolor(x,z,np.log10(P[:,:].T),vmin=np.amin(P), vmax=np.amax(P), cmap='hot')
-		#pcolor(x,z,P[:,:].T, cmap='hot')
+		#pcolor(x,z,np.log10(P[:,:].T), cmap='hot')
+		pcolor(x,z,P[:,:].T, cmap='hot')
 		colorbar()
 		fname = 'EfieldPlot' + str(observationTime) + 'ns'
 		#clim(0,1000)
