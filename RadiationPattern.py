@@ -6,10 +6,44 @@ Created on Thu May  1 19:15:21 2014
 """
 
 from __future__ import division
+from pylab import *
+from pylab import rcParams
+from mpl_toolkits.mplot3d import Axes3D
 from numpy import *
 from numpy.random import random
+import argparse
+import os
+from os import path as op 
+import timeit
+import multiprocessing
 from dipole import Hertz_dipole
 
+def parallel_worker(data_point):
+	i, j, args = data_point
+	E,B=Hertz_dipole(*args)
+	return i, j, sqrt(sum((0.5*abs(cross(E.T,(B.T))))**2,axis=1))
+
+def fill_matrix_parallel(P, p, nt, np, distance, theta, phi, R, phases_dip, freq, t_k):
+	data_set = []
+	for i in range(nt):
+		for j in range(np):
+			r=(array([distance*sin(theta[i])*cos(phi[j]),distance*sin(theta[i])*sin(phi[j]),distance*cos(theta[i])])).T
+			args = (r, p, R, phases_dip, freq, t_k)
+			data_point = [i, j, args]
+			data_set.append(data_point)
+
+	pool = multiprocessing.Pool(multiprocessing.cpu_count()-1)
+	chunksize = max(int(round((nt*np)/(multiprocessing.cpu_count()-1))) - 100, 1)
+	results = pool.map(parallel_worker, data_set, chunksize=chunksize)
+
+	pool.close()
+	pool.join()
+	pool.terminate()
+
+	for point in results:
+		i, j = point[0], point[1] 
+		P[i,j,:] = point[2]
+		
 nt=181
 np=360
 
@@ -42,47 +76,79 @@ p=(array([r_dip*sin(th_dip)*cos(phi_dip),r_dip*sin(th_dip)*sin(phi_dip),r_dip*co
 #dipole phases
 phases_dip=2*pi*random(n_dip)
 
-P=zeros((nt,np,nf))
-print("Computing the radiation...")
-for i in range(nt):
-  for j in range(np):
-    r=(array([distance*sin(theta[i])*cos(phi[j]),distance*sin(theta[i])*sin(phi[j]),distance*cos(theta[i])])).T
-    E,B=Hertz_dipole (r, p, R, phases_dip, freq, t=0, epsr=1.)
-    P[i,j,:]=sqrt(sum((0.5*abs(cross(E.T,(B.T))))**2,axis=1))
-    #P[i,j,:]=.5*sum(abs(E)**2,axis=0) # gives the average value of the power over a period, if you want the radiated power at time t=0, please consider using 0.5*sum(real(E)**2,axis=0)
-  print('%2.1f/100'%((i+1)/nt*100))
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-o", "--output", help="directory to output images to, defaults to \"{script_path}/rp\"")
+	parser.add_argument("-np", "--no-parallel", action='store_true', help="If set multiprocessing won't be used.")
+	args = parser.parse_args()
+	out_dir = args.output 
+	if not out_dir:
+		out_dir= op.join(op.dirname(__file__), 'rp') #Use default out dir path
 
-print("Printing the radiation patterns")
-from pylab import *
-from pylab import rcParams
-from mpl_toolkits.mplot3d import Axes3D
+	if not op.exists(out_dir):
+		os.mkdir(out_dir) #Make out dir if not exists
 
-rcParams['text.usetex']=True
-rcParams['text.latex.unicode']=True
-rcParams['legend.fontsize'] = 'medium'
-rc('font',**{'family':'serif','serif':['Computer Modern Roman']})
+	if args.no_parallel:
+		print('Running in iterative mode')
+	else:
+		print('Running in multiprocessing mode')
+	start = timeit.default_timer()
+	
+	s = time.time()
+	P=zeros((nt,np,nf))
+	if args.no_parallel:
+		print("Computing the radiation iteratively...")
+		for i in range(nt):
+			for j in range(np):
+				r=(array([distance*sin(theta[i])*cos(phi[j]),distance*sin(theta[i])*sin(phi[j]),distance*cos(theta[i])])).T
 
-#Radiation diagram
-fig = figure(figsize=(12, 12), dpi=50)
-for f in range(nf):
-  ax = fig.add_subplot(111, projection='3d', frame_on=False)
-  ax._axis3don = False
-  R = P[:,:,f]/(P[:,:,f]).max()
-  D = P[:,:,f].max()/(P[:,:,f]).mean()
-  x = R.T  * outer(cos(phi), sin(theta))
-  y = R.T  * outer(sin(phi), sin(theta))
-  z = R.T  * outer(ones_like(phi), cos(theta))
-  ax.plot_surface(x, y, z,  rstride=2, cstride=2,color='w',\
-      linewidth=0.6,shade=False)
-  max_radius = 0.7
-  print('f= %2.1f MHz' %(freq[f]/1e6))
-  title(r'$f= %2.1f$ MHz, $D \approx %2.1f$' %(freq[f]/1e6,D),fontsize=20)
-  for axis in 'xyz':
-      getattr(ax, 'set_{}lim'.format(axis))((-max_radius, max_radius))
-  fname = 'rp_%s' %(f)
-  print 'Saving frame', fname
-  fig.savefig(fname+'.png',bbox='tight')
-  #fig.savefig(fname+'.svg',bbox='tight')
-  #fig.savefig(fname+'.pdf',bbox='tight')
-  clf()
-close()
+				E,B=Hertz_dipole (r, p, R, phases_dip, freq, t=0, epsr=1.)
+				P[i,j,:]=sqrt(sum((0.5*abs(cross(E.T,(B.T))))**2,axis=1))
+				#P[i,j,:]=.5*sum(abs(E)**2,axis=0) # gives the average value of the power over a period, if you want the radiated power at time t=0, please consider using 0.5*sum(real(E)**2,axis=0)
+		print('%2.1f/100'%((i+1)/nt*100))
+	else:
+		print("Computing the radiation parallel...")
+		t_k = 0 
+		fill_matrix_parallel(P, p, nt, np, distance, theta, phi, R, phases_dip, freq, t_k)
+
+	print('Computation done in', time.time()-s)
+	#assert (P[~isnan(P)] - P1[~isnan(P1)] < 1e-5).all() #Debug assertion to ensure parallel and iterative matrices are the same.
+
+	print("Printing the radiation patterns")
+	rcParams['text.usetex']=True
+	rcParams['text.latex.unicode']=True
+	rcParams['legend.fontsize'] = 'medium'
+	rc('font',**{'family':'serif','serif':['Computer Modern Roman']})
+
+	#Radiation diagram
+	fig = figure(figsize=(12, 12), dpi=50)
+	for f in range(nf):
+		ax = fig.add_subplot(111, projection='3d', frame_on=False)
+		ax._axis3don = False
+		R = P[:,:,f]/(P[:,:,f]).max()
+		D = P[:,:,f].max()/(P[:,:,f]).mean()
+		x = R.T  * outer(cos(phi), sin(theta))
+		y = R.T  * outer(sin(phi), sin(theta))
+		z = R.T  * outer(ones_like(phi), cos(theta))
+		ax.plot_surface(x, y, z,  rstride=2, cstride=2,color='w',\
+			linewidth=0.6,shade=False)
+		max_radius = 0.7
+		print('f= %2.1f MHz' %(freq[f]/1e6))
+		title(r'$f= %2.1f$ MHz, $D \approx %2.1f$' %(freq[f]/1e6,D),fontsize=20)
+	for axis in 'xyz':
+		getattr(ax, 'set_{}lim'.format(axis))((-max_radius, max_radius))
+		fname = 'rp_%s' %(f)
+		fpath = op.join(out_dir,fname+'.png')
+		print ('Saving frame', fpath)
+		fig.savefig(fpath,bbox='tight')
+		#fig.savefig(fname+'.svg',bbox='tight')
+		#fig.savefig(fname+'.pdf',bbox='tight')
+		clf()
+	close()
+
+	stop = timeit.default_timer()
+	total_time = stop - start
+	mins, secs = divmod(total_time, 60)
+	hours, mins = divmod(mins, 60)
+
+	sys.stdout.write("Total running time: %d:%d:%d.\n"  % (hours, mins, secs))
